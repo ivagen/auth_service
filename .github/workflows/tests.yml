@@ -18,15 +18,20 @@ jobs:
 
       - name: Install dependencies
         run: composer install --no-interaction --prefer-dist --optimize-autoloader
+        working-directory: www
 
       - name: Copy .env
         run: cp .env.example .env
+        working-directory: www
 
       - name: Generate app key
         run: php artisan key:generate
+        working-directory: www
 
       - name: Generate Passport keys
         run: php artisan passport:keys --no-interaction
+        working-directory: www
 
       - name: Run tests
         run: composer test
+        working-directory: www

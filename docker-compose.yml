@@ -4,7 +4,7 @@ services:
       context: .
       dockerfile: Dockerfile
     volumes:
-      - .:/var/www
+      - ./www:/var/www
     depends_on:
       - mysql
       - redis
@@ -16,7 +16,7 @@ services:
     ports:
       - "8000:80"
     volumes:
-      - .:/var/www
+      - ./www:/var/www
       - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf
     depends_on:
       - app

@@ -40,18 +40,18 @@ test:
 	docker compose exec app composer test
 
 env:
-	@if [ ! -f .env ]; then cp .env.example .env; echo ".env created from .env.example"; else echo ".env already exists"; fi
+	@if [ ! -f www/.env ]; then cp www/.env.example www/.env; echo ".env created from .env.example"; else echo ".env already exists"; fi
 
 bootstrap:
-	@if [ ! -f .env ]; then cp .env.example .env; echo ".env created from .env.example"; fi
+	@if [ ! -f www/.env ]; then cp www/.env.example www/.env; echo ".env created from .env.example"; fi
 	docker compose up -d --build
-	@if [ ! -d vendor ]; then mkdir vendor; echo "vendor folder created"; fi
-	sudo chmod -R 775 vendor
+	@if [ ! -d www/vendor ]; then mkdir www/vendor; echo "vendor folder created"; fi
+	sudo chmod -R 775 www/vendor
 	docker compose exec app composer install
 	docker compose exec app php artisan key:generate --ansi
 	docker compose exec app php artisan passport:keys --no-interaction 2>/dev/null || true
 	docker compose exec app php artisan migrate --force
-	sudo chmod -R 775 storage bootstrap/cache
-	sudo chown -R www-data:www-data storage bootstrap/cache
-	sudo chmod 660 /home/yevhenii/www/auth_service/storage/oauth-public.key
-	sudo chmod 660 /home/yevhenii/www/auth_service/storage/oauth-private.key
+	sudo chmod -R 775 www/storage www/bootstrap/cache
+	sudo chown -R www-data:www-data www/storage www/bootstrap/cache
+	sudo chmod 660 /home/yevhenii/www/auth_service/www/storage/oauth-public.key
+	sudo chmod 660 /home/yevhenii/www/auth_service/www/storage/oauth-private.key
