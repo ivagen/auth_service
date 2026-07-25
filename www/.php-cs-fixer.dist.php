@@ -10,44 +10,27 @@ $finder = PhpCsFixer\Finder::create()
         __DIR__ . '/tests',
     ])
     ->name('*.php')
-    ->notName('*.blade.php')
     ->ignoreDotFiles(true)
     ->ignoreVCS(true);
 
 return (new PhpCsFixer\Config())
     ->setRules([
-        '@PSR2' => true,
+        // Modern base ruleset instead of the legacy @PSR2.
+        '@PSR12' => true,
+        'declare_strict_types' => true,
         'no_empty_phpdoc' => true,
         'no_unused_imports' => true,
-        'single_blank_line_before_namespace' => true,
         'array_syntax' => ['syntax' => 'short'],
-        'ordered_imports' => ['sort_algorithm' => 'length'],
+        'ordered_imports' => ['sort_algorithm' => 'alpha'],
         'blank_line_before_statement' => [
-            'statements' => [
-                'return',
-            ]
+            'statements' => ['return'],
         ],
-        'align_multiline_comment' => true,
         'trailing_comma_in_multiline' => [
             'after_heredoc' => true,
             'elements' => ['arguments', 'arrays', 'match', 'parameters'],
         ],
-        'single_space_after_construct' => [
-            'constructs' => [
-                'abstract', 'as', 'attribute', 'break', 'case', 'catch', 'class', 'clone', 'comment', 'const',
-                'const_import', 'continue', 'do', 'echo', 'else', 'elseif', 'enum', 'extends', 'final', 'finally',
-                'for', 'foreach', 'function', 'function_import', 'global', 'goto', 'if', 'implements', 'include',
-                'include_once', 'instanceof', 'insteadof', 'interface', 'match', 'named_argument', 'namespace', 'new',
-                'open_tag_with_echo', 'php_doc', 'php_open', 'print', 'private', 'protected', 'public', 'readonly',
-                'require', 'require_once', 'return', 'static', 'switch', 'throw', 'trait', 'try', 'type_colon', 'use',
-                'use_lambda', 'use_trait', 'var', 'while', 'yield', 'yield_from',
-            ],
-        ],
         'binary_operator_spaces' => [
             'default' => 'single_space',
-        ],
-        'visibility_required' => [
-            'elements' => ['method'],
         ],
     ])
     ->setFinder($finder);

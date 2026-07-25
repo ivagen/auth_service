@@ -1,0 +1,56 @@
+# Production overrides. Usage:
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+#
+# Differences from the dev stack:
+#   - builds the self-contained `production` image (code + vendor baked in, runs
+#     as www-data), so there is NO source or vendor bind mount;
+#   - secrets come from the environment, never from a checked-in default;
+#   - APP_DEBUG must be false and APP_ENV=production (see .env.production.example).
+services:
+  app:
+    build:
+      target: production
+    # Compose merges mappings and sequences from the base file. !reset is
+    # required here: `[]` alone would keep the development bind mount/env file.
+    user: "www-data"
+    volumes: !reset []
+    env_file: !reset []
+    environment:
+      APP_ENV: production
+      APP_DEBUG: "false"
+      APP_KEY: ${APP_KEY:?APP_KEY is required}
+      APP_NAME: ${APP_NAME:-Auth Service}
+      APP_URL: ${APP_URL:?APP_URL is required}
+      LOG_CHANNEL: ${LOG_CHANNEL:-stack}
+      LOG_LEVEL: ${LOG_LEVEL:-warning}
+      DB_CONNECTION: mysql
+      DB_HOST: mysql
+      DB_PORT: "3306"
+      DB_DATABASE: ${DB_DATABASE:?DB_DATABASE is required}
+      DB_USERNAME: ${DB_USERNAME:?DB_USERNAME is required}
+      DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
+      REDIS_HOST: redis
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-null}
+      SESSION_DRIVER: ${SESSION_DRIVER:-redis}
+      CACHE_STORE: ${CACHE_STORE:-redis}
+      QUEUE_CONNECTION: ${QUEUE_CONNECTION:-redis}
+      PASSPORT_PRIVATE_KEY: ${PASSPORT_PRIVATE_KEY:?PASSPORT_PRIVATE_KEY is required}
+      PASSPORT_PUBLIC_KEY: ${PASSPORT_PUBLIC_KEY:?PASSPORT_PUBLIC_KEY is required}
+
+  nginx:
+    image: auth-service-nginx
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: nginx-production
+    volumes: !reset []
+    depends_on:
+      app:
+        condition: service_healthy
+
+  mysql:
+    environment:
+      MYSQL_DATABASE: ${DB_DATABASE:?DB_DATABASE is required}
+      MYSQL_USER: ${DB_USERNAME:?DB_USERNAME is required}
+      MYSQL_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:?DB_ROOT_PASSWORD is required}

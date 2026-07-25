@@ -1,4 +1,9 @@
-.PHONY: up down restart build logs shell migrate fresh passport passport-client cs-fix cs-check test bootstrap env
+.PHONY: up down restart build logs shell migrate fresh passport-setup cs-fix cs-check test bootstrap env
+
+# Run the app container as the current host user so files created inside the
+# container (vendor, storage, caches) stay owned by you — no sudo/chown needed.
+export UID := $(shell id -u)
+export GID := $(shell id -g)
 
 up:
 	docker compose up -d
@@ -24,11 +29,9 @@ migrate:
 fresh:
 	docker compose exec app php artisan migrate:fresh --seed
 
-passport:
-	docker compose exec app php artisan passport:install
-
-passport-client:
-	docker compose exec app php artisan passport:client --personal --name="Laravel Personal Access Client" --no-interaction
+# Idempotent: ensures Passport keys + a personal access client exist.
+passport-setup:
+	docker compose exec app php artisan passport:setup
 
 cs-fix:
 	docker compose exec app composer cs:fix
@@ -41,17 +44,13 @@ test:
 
 env:
 	@if [ ! -f www/.env ]; then cp www/.env.example www/.env; echo ".env created from .env.example"; else echo ".env already exists"; fi
+	@ln -sf www/.env .env
 
-bootstrap:
-	@if [ ! -f www/.env ]; then cp www/.env.example www/.env; echo ".env created from .env.example"; fi
+bootstrap: env
 	docker compose up -d --build
-	@if [ ! -d www/vendor ]; then mkdir www/vendor; echo "vendor folder created"; fi
-	sudo chmod -R 775 www/vendor
 	docker compose exec app composer install
 	docker compose exec app php artisan key:generate --ansi
-	docker compose exec app php artisan passport:keys --no-interaction 2>/dev/null || true
 	docker compose exec app php artisan migrate --force
-	sudo chmod -R 775 www/storage www/bootstrap/cache
-	sudo chown -R www-data:www-data www/storage www/bootstrap/cache
-	sudo chmod 660 /home/yevhenii/www/auth_service/www/storage/oauth-public.key
-	sudo chmod 660 /home/yevhenii/www/auth_service/www/storage/oauth-private.key
+	docker compose exec app php artisan passport:setup
+	@echo ""
+	@echo "Bootstrap complete. API available at http://localhost:8000/api/v1"

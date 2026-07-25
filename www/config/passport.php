@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 return [
 
     /*
@@ -44,5 +46,22 @@ return [
     */
 
     'connection' => env('PASSPORT_CONNECTION'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Token Lifetimes (days)
+    |--------------------------------------------------------------------------
+    |
+    | Applied in AppServiceProvider. `personal_access` is what this service
+    | issues on register/login; the access/refresh values only matter if the
+    | OAuth authorization flows are enabled later.
+    |
+    */
+
+    'personal_access_token_ttl_days' => (int) env('PASSPORT_PERSONAL_ACCESS_TOKEN_TTL_DAYS', 15),
+
+    'access_token_ttl_days' => (int) env('PASSPORT_ACCESS_TOKEN_TTL_DAYS', 1),
+
+    'refresh_token_ttl_days' => (int) env('PASSPORT_REFRESH_TOKEN_TTL_DAYS', 30),
 
 ];

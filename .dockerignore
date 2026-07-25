@@ -1,0 +1,21 @@
+.git
+.github
+.idea
+.vscode
+*.md
+docker-compose*.yml
+Makefile
+
+# App-level artifacts that must never leak into the build context / image.
+www/vendor
+www/node_modules
+www/.env
+www/.env.*
+www/storage/*.key
+www/storage/logs/*
+www/storage/framework/cache/data/*
+www/storage/framework/sessions/*
+www/storage/framework/views/*
+www/.phpunit.result.cache
+www/.phpunit.cache
+www/.php-cs-fixer.cache

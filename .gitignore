@@ -1,1 +1,5 @@
 .idea
+
+# Root .env is a symlink to www/.env created by `make bootstrap` so Docker
+# Compose interpolation shares the application's single source of config.
+.env

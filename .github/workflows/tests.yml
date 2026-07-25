@@ -1,11 +1,42 @@
-name: Tests
+name: CI
 
 on: [push, pull_request]
 
-jobs:
-  test:
-    runs-on: ubuntu-latest
+defaults:
+  run:
+    working-directory: www
 
+jobs:
+  quality:
+    name: Static analysis & style
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.5'
+          coverage: none
+
+      - name: Validate composer.json
+        run: composer validate --strict
+
+      - name: Install dependencies
+        run: composer install --no-interaction --prefer-dist --optimize-autoloader
+
+      - name: Check code style
+        run: composer cs:check
+
+      - name: Static analysis
+        run: composer stan
+
+      - name: Security audit
+        run: composer audit
+
+  tests:
+    name: Unit & feature tests
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
@@ -18,20 +49,104 @@ jobs:
 
       - name: Install dependencies
         run: composer install --no-interaction --prefer-dist --optimize-autoloader
-        working-directory: www
 
-      - name: Copy .env
-        run: cp .env.example .env
-        working-directory: www
-
-      - name: Generate app key
-        run: php artisan key:generate
-        working-directory: www
-
-      - name: Generate Passport keys
-        run: php artisan passport:keys --no-interaction
-        working-directory: www
+      - name: Prepare environment
+        run: |
+          cp .env.example .env
+          php artisan key:generate
+          php artisan passport:keys --no-interaction
 
       - name: Run tests
         run: composer test
-        working-directory: www
+
+  smoke:
+    name: HTTP smoke test (MySQL)
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_DATABASE: laravel
+          MYSQL_USER: laravel
+          MYSQL_PASSWORD: secret
+          MYSQL_ROOT_PASSWORD: root
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.5'
+          extensions: pdo_mysql
+          coverage: none
+
+      - name: Install dependencies
+        run: composer install --no-interaction --prefer-dist --optimize-autoloader
+
+      - name: Prepare environment
+        run: |
+          cp .env.example .env
+          php artisan key:generate
+          # Point at the MySQL service and avoid Redis in CI.
+          sed -i 's/^DB_HOST=.*/DB_HOST=127.0.0.1/' .env
+          sed -i 's/^SESSION_DRIVER=.*/SESSION_DRIVER=file/' .env
+          sed -i 's/^CACHE_STORE=.*/CACHE_STORE=file/' .env
+          sed -i 's/^QUEUE_CONNECTION=.*/QUEUE_CONNECTION=sync/' .env
+
+      - name: Migrate on a clean MySQL database
+        run: php artisan migrate --force
+
+      - name: Bootstrap Passport (same command as `make bootstrap`)
+        run: php artisan passport:setup
+
+      - name: Serve the application
+        run: php artisan serve --host=127.0.0.1 --port=8000 &
+
+      - name: Wait for the server
+        run: |
+          for i in $(seq 1 30); do
+            curl -fsS http://127.0.0.1:8000/up >/dev/null 2>&1 && exit 0
+            sleep 1
+          done
+          echo "server did not become ready" >&2
+          exit 1
+
+      - name: Run smoke test
+        run: BASE_URL=http://127.0.0.1:8000 bash ../scripts/smoke.sh
+
+  docker:
+    name: Validate production images
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate production Compose overlay
+        working-directory: .
+        env:
+          APP_KEY: base64:ci-placeholder
+          APP_URL: https://auth.example.test
+          DB_DATABASE: auth_service
+          DB_USERNAME: auth_service
+          DB_PASSWORD: ci-placeholder
+          DB_ROOT_PASSWORD: ci-root-placeholder
+          PASSPORT_PRIVATE_KEY: ci-private-placeholder
+          PASSPORT_PUBLIC_KEY: ci-public-placeholder
+        run: |
+          docker compose -f docker-compose.yml -f docker-compose.prod.yml config > /tmp/production-compose.yml
+          if grep -q "$(pwd)/www:/var/www" /tmp/production-compose.yml; then
+            echo "Development source bind mount leaked into production config" >&2
+            exit 1
+          fi
+
+      - name: Build production PHP image
+        run: docker build --target production -t auth-service:ci ..
+
+      - name: Build production nginx image
+        run: docker build --target nginx-production -t auth-service-nginx:ci ..
