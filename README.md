@@ -123,7 +123,9 @@ An end-to-end version of this flow lives in [`scripts/smoke.sh`](scripts/smoke.s
 |-----------------------|----------------------------------------------|
 | `make up`             | Start containers                             |
 | `make down`           | Stop containers                              |
+| `make restart`        | Restart containers                           |
 | `make build`          | Rebuild and start containers                 |
+| `make env`            | Create `www/.env` from the example + symlink |
 | `make logs`           | Follow container logs                        |
 | `make shell`          | Shell into the app container                 |
 | `make migrate`        | Run migrations                               |
@@ -146,7 +148,8 @@ composer audit     # dependency vulnerability audit
 
 CI (`.github/workflows/tests.yml`) runs all of the above plus a **MySQL HTTP
 smoke test** that boots the app the same way `make bootstrap` does and exercises
-register → login → profile → logout, and a production Docker image build.
+register → profile → login → logout (verifying the revoked token is rejected),
+and a production Docker image build.
 
 ## Production
 
